@@ -6,7 +6,7 @@ import {
   LayoutDashboard, LockKeyhole, Mic, Mic2, MoreHorizontal, Pause, Play,
   RotateCcw, Settings, ShieldCheck, Sparkles, Star, Target, TrendingUp,
   UserRound, Volume2, VolumeX, WandSparkles, X, Zap, MessageCircle, Send,
-  Keyboard, Bot
+  Keyboard, Bot, Database, Filter, Lightbulb, Eye, Layers3
 } from 'lucide-react'
 import './styles.css'
 
@@ -14,6 +14,7 @@ const navItems = [
   { id: 'dashboard', label: '學習首頁', icon: LayoutDashboard },
   { id: 'listening', label: '模擬考試', icon: Headphones },
   { id: 'speaking', label: 'AI 口說教練', icon: Mic2 },
+  { id: 'bank', label: 'AI 原創題庫', icon: Database },
   { id: 'results', label: '學習分析', icon: BarChart3 },
 ]
 
@@ -27,7 +28,7 @@ const practiceCards = [
     desc: 'Part 2–4 情境聽力', meta: '約 15 分鐘', icon: Headphones, tone: 'blue'
   },
   {
-    id: 'reading', eyebrow: 'READING', title: '閱讀練習',
+    id: 'bank', eyebrow: 'READING', title: '閱讀練習',
     desc: 'Part 5–7 商務閱讀', meta: '約 20 分鐘', icon: BookOpenCheck, tone: 'sand'
   },
   {
@@ -41,7 +42,7 @@ function App() {
   const [toast, setToast] = useState('')
 
   const navigate = (id) => {
-    setPage(id === 'reading' ? 'listening' : id)
+    setPage(id === 'reading' ? 'bank' : id)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -59,6 +60,7 @@ function App() {
         {page === 'dashboard' && <Dashboard navigate={navigate} setToast={setToast} />}
         {page === 'listening' && <Listening navigate={navigate} />}
         {page === 'speaking' && <Speaking navigate={navigate} />}
+        {page === 'bank' && <QuestionBank navigate={navigate} />}
         {page === 'results' && <Results navigate={navigate} />}
       </main>
       {toast && <div className="toast"><CheckCircle2 size={18} />{toast}</div>}
@@ -102,7 +104,7 @@ function Sidebar({ page, navigate }) {
 }
 
 function Topbar({ page, setToast }) {
-  const title = { dashboard: '學習總覽', listening: 'TOEIC Listening Test', speaking: 'AI Speaking Interview', results: '能力分析報告' }[page]
+  const title = { dashboard: '學習總覽', listening: 'TOEIC Listening Test', speaking: 'AI Speaking Interview', bank: 'AI 原創仿真題庫', results: '能力分析報告' }[page]
   return (
     <header className="topbar">
       <div>
@@ -558,6 +560,135 @@ function AiConversation() {
       </div>
     </div>
   </section>
+}
+
+const toeicQuestionBank = [
+  { id:'p2-01', part:'Part 2', category:'辦公室 · 地點', difficulty:'中階', spoken:'Where should I leave the signed contract?', prompt:'選出最適當的回應。', options:['At the front desk.','It was signed yesterday.','Three copies, please.'], correct:0, explanation:'Where should I… 詢問地點；At the front desk 直接回答文件應放置的位置。', tags:['where 問句','contract','office'] },
+  { id:'p2-02', part:'Part 2', category:'財務 · 進度', difficulty:'中階', spoken:"Haven't you sent the invoice yet?", prompt:'選出最適當的回應。', options:['The delivery entrance is over there.',"Not yet—the accounting team is correcting the total.",'I paid in cash.'], correct:1, explanation:'否定疑問句詢問發票是否已寄出；Not yet 加上延遲原因是最自然的回應。', tags:['否定問句','invoice','accounting'] },
+  { id:'p2-03', part:'Part 2', category:'設施 · 時間', difficulty:'基礎', spoken:'When will the lobby renovation be completed?', prompt:'選出最適當的回應。', options:['By the end of next month.','The lobby is on the first floor.','Yes, it looks much brighter.'], correct:0, explanation:'When 詢問時間，By the end of next month 提供明確完工期限。', tags:['when 問句','renovation','deadline'] },
+  { id:'p2-04', part:'Part 2', category:'會議 · 人物', difficulty:'基礎', spoken:"Who's leading the client presentation?", prompt:'選出最適當的回應。', options:['In the large conference room.','The slides need a few changes.','Ms. Patel from marketing.'], correct:2, explanation:'Who 詢問人物，因此回答行銷部的 Patel 女士最符合問題。', tags:['who 問句','presentation','marketing'] },
+  { id:'p2-05', part:'Part 2', category:'行程 · 原因', difficulty:'中階', spoken:'Why was the conference call postponed?', prompt:'選出最適當的回應。', options:['The regional office is closed for a holiday.','About forty-five minutes.','I joined from my laptop.'], correct:0, explanation:'Why 詢問原因；分公司因假日關閉能合理解釋電話會議延期。', tags:['why 問句','postpone','schedule'] },
+  { id:'p2-06', part:'Part 2', category:'餐敘 · 請求', difficulty:'基礎', spoken:'Could you reserve a table for lunch?', prompt:'選出最適當的回應。', options:['Lunch was delicious.','Sure. For how many people?','The menu was printed yesterday.'], correct:1, explanation:'Could you… 是禮貌請求；先答應並詢問人數是自然且完整的回應。', tags:['禮貌請求','reservation','restaurant'] },
+  {
+    id:'p3-01', part:'Part 3', category:'科技 · 系統上線', difficulty:'中階', group:'Conversation A',
+    script:[{speaker:'W',text:"The new scheduling platform is supposed to launch on Monday, but several employees still can't log in."},{speaker:'M',text:"I'll send them the updated setup guide this afternoon. If the problem continues, we may need to delay the launch until Wednesday."},{speaker:'W',text:'Please copy the department managers on your message.'}],
+    prompt:'What problem does the woman mention?', options:['A meeting room is unavailable.','Some employees cannot access a system.','A training guide has incorrect dates.','The managers missed a presentation.'], correct:1, explanation:'女子指出 several employees still can’t log in，也就是部分員工無法登入系統。', tags:['problem','log in','software']
+  },
+  {
+    id:'p3-02', part:'Part 3', category:'科技 · 系統上線', difficulty:'中階', group:'Conversation A',
+    script:[{speaker:'W',text:"The new scheduling platform is supposed to launch on Monday, but several employees still can't log in."},{speaker:'M',text:"I'll send them the updated setup guide this afternoon. If the problem continues, we may need to delay the launch until Wednesday."},{speaker:'W',text:'Please copy the department managers on your message.'}],
+    prompt:'What will the man do this afternoon?', options:['Update a calendar.','Meet department managers.','Send a setup guide.','Launch a new platform.'], correct:2, explanation:'男子說 I’ll send them the updated setup guide this afternoon，答案是寄出更新後的設定指南。', tags:['next action','setup guide','email']
+  },
+  {
+    id:'p3-03', part:'Part 3', category:'科技 · 系統上線', difficulty:'進階', group:'Conversation A',
+    script:[{speaker:'W',text:"The new scheduling platform is supposed to launch on Monday, but several employees still can't log in."},{speaker:'M',text:"I'll send them the updated setup guide this afternoon. If the problem continues, we may need to delay the launch until Wednesday."},{speaker:'W',text:'Please copy the department managers on your message.'}],
+    prompt:'What is suggested about the platform launch?', options:['It may be postponed.','It was approved by all managers.','It will require a new budget.','It has already been completed.'], correct:0, explanation:'若問題持續，可能從星期一延到星期三，暗示上線日可能延後。', tags:['inference','delay','launch']
+  },
+  {
+    id:'p3-04', part:'Part 3', category:'物流 · 展覽', difficulty:'中階', group:'Conversation B',
+    script:[{speaker:'W',text:'Three of the display units arrived with cracked screens. The trade show starts Friday.'},{speaker:'M',text:"I've already asked the warehouse to ship replacements by express delivery."},{speaker:'W',text:"Good. I'll contact the event organizer and confirm that our booth setup will start Thursday afternoon."}],
+    prompt:'What problem are the speakers discussing?', options:['A booth is too small.','An event date has changed.','Some equipment was damaged.','A delivery address is missing.'], correct:2, explanation:'cracked screens 表示展示設備的螢幕破裂，也就是部分設備在運送時損壞。', tags:['problem','damaged goods','trade show']
+  },
+  {
+    id:'p3-05', part:'Part 3', category:'物流 · 展覽', difficulty:'中階', group:'Conversation B',
+    script:[{speaker:'W',text:'Three of the display units arrived with cracked screens. The trade show starts Friday.'},{speaker:'M',text:"I've already asked the warehouse to ship replacements by express delivery."},{speaker:'W',text:"Good. I'll contact the event organizer and confirm that our booth setup will start Thursday afternoon."}],
+    prompt:'What has the man asked the warehouse to do?', options:['Repair the original units.','Send replacements quickly.','Change the booth location.','Call the event organizer.'], correct:1, explanation:'ship replacements by express delivery 指以快遞寄送替換品，對應 send replacements quickly。', tags:['paraphrase','express delivery','replacement']
+  },
+  {
+    id:'p3-06', part:'Part 3', category:'物流 · 展覽', difficulty:'中階', group:'Conversation B',
+    script:[{speaker:'W',text:'Three of the display units arrived with cracked screens. The trade show starts Friday.'},{speaker:'M',text:"I've already asked the warehouse to ship replacements by express delivery."},{speaker:'W',text:"Good. I'll contact the event organizer and confirm that our booth setup will start Thursday afternoon."}],
+    prompt:'What will the woman most likely do next?', options:['Contact the event organizer.','Inspect a warehouse.','Order additional screens.','Prepare an expense report.'], correct:0, explanation:'女子直接說 I’ll contact the event organizer，因此下一步是聯絡活動主辦方。', tags:['next action','organizer','booth setup']
+  },
+  { id:'p5-01', part:'Part 5', category:'文法 · 介系詞', difficulty:'基礎', prompt:'The quarterly report must be submitted _____ Friday.', options:['by','from','among','during'], correct:0, explanation:'by + 時間點表示「最遲在……之前」，符合報告繳交期限的語意。', tags:['preposition','deadline','by'] },
+  { id:'p5-02', part:'Part 5', category:'文法 · 動詞', difficulty:'基礎', prompt:'Employees are encouraged to _____ feedback after each training session.', options:['provide','provider','provided','provision'], correct:0, explanation:'to 後面需要原形動詞，provide feedback 是「提供回饋」的常見搭配。', tags:['verb form','feedback','collocation'] },
+  { id:'p5-03', part:'Part 5', category:'字彙 · 形容詞', difficulty:'中階', prompt:'Ms. Chen was promoted because of her _____ leadership during the merger.', options:['exception','exceptional','exceptionally','except'], correct:1, explanation:'空格修飾名詞 leadership，需要形容詞 exceptional，表示「傑出的」。', tags:['word form','leadership','promotion'] },
+  { id:'p5-04', part:'Part 5', category:'文法 · 連接語', difficulty:'中階', prompt:'The flight was delayed _____ severe weather near the destination.', options:['because','because of','although','despite of'], correct:1, explanation:'空格後接名詞片語 severe weather，因此使用 because of；because 後須接完整子句。', tags:['because of','weather','preposition'] },
+  { id:'p5-05', part:'Part 5', category:'文法 · 主詞一致', difficulty:'進階', prompt:'Neither the manager nor her assistants _____ available when the client called.', options:['was','were','be','has been'], correct:1, explanation:'neither A nor B 的動詞通常與較近主詞一致；assistants 是複數，且 called 為過去式，所以用 were。', tags:['agreement','neither nor','past tense'] },
+  { id:'p5-06', part:'Part 5', category:'文法 · 比較級', difficulty:'基礎', prompt:'Our new inventory software is more efficient _____ the previous version.', options:['as','than','then','of'], correct:1, explanation:'more efficient 是比較級，後面以 than 引出比較對象。', tags:['comparative','than','software'] },
+  { id:'p5-07', part:'Part 5', category:'文法 · 時間連接詞', difficulty:'中階', prompt:'Applicants should attach a résumé _____ submitting the online form.', options:['before','until','unless','throughout'], correct:0, explanation:'語意為「送出線上表單前附上履歷」，before 後可接動名詞 submitting。', tags:['before','gerund','application'] },
+  { id:'p5-08', part:'Part 5', category:'字彙 · 形容詞', difficulty:'中階', prompt:'The café has become increasingly _____ among employees in nearby offices.', options:['popularity','popular','popularly','popularize'], correct:1, explanation:'become 是連綴動詞，後面需要形容詞 popular 作主詞補語；increasingly 修飾該形容詞。', tags:['word form','popular','linking verb'] }
+]
+
+const bankFilters = ['全部', 'Part 2', 'Part 3', 'Part 5']
+
+function QuestionBank({ navigate }) {
+  const [filter, setFilter] = useState('全部')
+  const [current, setCurrent] = useState(0)
+  const [selected, setSelected] = useState(null)
+  const [revealed, setRevealed] = useState(false)
+  const [transcriptOpen, setTranscriptOpen] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const [answers, setAnswers] = useState({})
+  const filtered = filter === '全部' ? toeicQuestionBank : toeicQuestionBank.filter(item => item.part === filter)
+  const question = filtered[current]
+  const completed = Object.keys(answers).length
+  const correctCount = Object.values(answers).filter(Boolean).length
+
+  useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [])
+
+  const changeFilter = (nextFilter) => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    setFilter(nextFilter); setCurrent(0); setSelected(null); setRevealed(false); setTranscriptOpen(false); setPlaying(false)
+  }
+  const playAudio = () => {
+    if (!('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel(); setPlaying(true)
+    const segments = question.script || [{speaker:'N', text:question.spoken || question.prompt}]
+    segments.forEach((segment,index) => {
+      const utterance = new SpeechSynthesisUtterance(segment.text)
+      utterance.lang='en-US'; utterance.rate=.88; utterance.pitch=segment.speaker==='W'?1.12:segment.speaker==='M'?.86:1
+      if (index===segments.length-1) utterance.onend=()=>setPlaying(false)
+      utterance.onerror=()=>setPlaying(false); window.speechSynthesis.speak(utterance)
+    })
+  }
+  const checkAnswer = () => {
+    if (selected === null) return
+    setRevealed(true); setAnswers(currentAnswers => ({...currentAnswers,[question.id]:selected===question.correct}))
+  }
+  const moveQuestion = offset => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    setCurrent(index => (index+offset+filtered.length)%filtered.length)
+    setSelected(null); setRevealed(false); setTranscriptOpen(false); setPlaying(false)
+  }
+  const transcriptVisible = transcriptOpen || revealed
+  const statusClass = optionIndex => {
+    if (!revealed) return selected===optionIndex?'selected':''
+    if (optionIndex===question.correct) return 'correct'
+    if (optionIndex===selected) return 'wrong'
+    return ''
+  }
+
+  return <div className="page bank-page">
+    <section className="bank-hero">
+      <div><span className="original-badge"><Sparkles size={14}/> AI ORIGINAL · 非官方真題</span><h2>2026 商務情境仿真題庫</h2><p>依 TOEIC Listening &amp; Reading 題型結構原創設計；聽力由 AI 朗讀，作答後提供逐字稿與中文解析。</p></div>
+      <div className="bank-stats"><span><b>{toeicQuestionBank.length}</b><small>原創題目</small></span><span><b>{completed}</b><small>本次完成</small></span><span><b>{completed?Math.round(correctCount/completed*100):0}%</b><small>正確率</small></span></div>
+    </section>
+    <div className="bank-toolbar">
+      <div className="bank-filter"><Filter size={15}/>{bankFilters.map(item=><button key={item} className={filter===item?'active':''} onClick={()=>changeFilter(item)}>{item}<em>{item==='全部'?toeicQuestionBank.length:toeicQuestionBank.filter(q=>q.part===item).length}</em></button>)}</div>
+      <button className="bank-exam-btn" onClick={()=>navigate('listening')}><ShieldCheck size={16}/> 進入計時模擬考</button>
+    </div>
+    <section className="bank-workspace">
+      <aside className="bank-index">
+        <div className="bank-index-head"><Layers3 size={16}/><span><b>{filter}</b><small>{filtered.length} questions</small></span></div>
+        <div className="bank-question-grid">{filtered.map((item,index)=><button key={item.id} className={`${index===current?'current':''} ${answers[item.id]===true?'passed':answers[item.id]===false?'failed':''}`} onClick={()=>{setCurrent(index);setSelected(null);setRevealed(false);setTranscriptOpen(false)}}>{index+1}</button>)}</div>
+        <div className="bank-legend"><span><i className="passed"></i>答對</span><span><i className="failed"></i>待複習</span></div>
+        <div className="bank-source-note"><LockKeyhole size={15}/><p><b>內容聲明</b><span>題目皆為 AI 原創仿真內容，不重製 YouTube 影片或正式試題。</span></p></div>
+      </aside>
+      <article className="bank-question-card">
+        <header><div><span>{question.part}</span><b>{question.category}</b>{question.group&&<em>{question.group}</em>}</div><small>{question.difficulty} · QUESTION {current+1} / {filtered.length}</small></header>
+        {(question.spoken||question.script)&&<div className="bank-audio">
+          <button className={playing?'playing':''} onClick={playAudio}><span>{playing?<Volume2 size={23}/>:<Play size={22}/>}</span><p><b>{playing?'AI 正在朗讀…':'播放 AI 聽力內容'}</b><small>{question.script?'雙角色英語對話 · 建議先不看逐字稿':'美式英語 · TOEIC Question–Response'}</small></p></button>
+          <div className={`mini-wave ${playing?'active':''}`}>{Array.from({length:22}).map((_,index)=><i key={index} style={{height:`${7+(index*7%19)}px`}}></i>)}</div>
+          <button className="transcript-toggle" onClick={()=>setTranscriptOpen(open=>!open)}><Eye size={15}/>{transcriptOpen?'隱藏逐字稿':'查看逐字稿'}</button>
+        </div>}
+        {(question.spoken||question.script)&&transcriptVisible&&<div className="bank-transcript"><span>TRANSCRIPT</span>{question.script?question.script.map((line,index)=><p key={index}><b>{line.speaker}</b>{line.text}</p>):<p><b>Q</b>{question.spoken}</p>}</div>}
+        <div className="bank-prompt"><span>QUESTION</span><h3>{question.prompt}</h3></div>
+        <div className="bank-options">{question.options.map((option,optionIndex)=><button key={option} disabled={revealed} className={statusClass(optionIndex)} onClick={()=>setSelected(optionIndex)}><span>{String.fromCharCode(65+optionIndex)}</span><b>{option}</b>{revealed&&optionIndex===question.correct&&<Check size={18}/>} {revealed&&optionIndex===selected&&optionIndex!==question.correct&&<X size={18}/>}</button>)}</div>
+        {revealed&&<div className={`bank-explanation ${selected===question.correct?'success':'review'}`}><Lightbulb size={19}/><div><b>{selected===question.correct?'答對了！':`正確答案：${String.fromCharCode(65+question.correct)}`}</b><p>{question.explanation}</p><div>{question.tags.map(tag=><span key={tag}>#{tag}</span>)}</div></div></div>}
+        <footer><button className="bank-prev" onClick={()=>moveQuestion(-1)}><ArrowLeft size={16}/> 上一題</button>{!revealed?<button className="bank-check" disabled={selected===null} onClick={checkAnswer}>檢查答案 <CheckCircle2 size={16}/></button>:<button className="bank-next" onClick={()=>moveQuestion(1)}>下一題 <ArrowRight size={16}/></button>}</footer>
+      </article>
+    </section>
+  </div>
 }
 
 const scoreItems = [
