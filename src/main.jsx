@@ -1,0 +1,634 @@
+import React, { useEffect, useRef, useState } from 'react'
+import { createRoot } from 'react-dom/client'
+import {
+  Activity, ArrowLeft, ArrowRight, BarChart3, BookOpenCheck, CalendarDays,
+  Check, CheckCircle2, ChevronRight, CircleHelp, Clock3, Flame, Headphones,
+  LayoutDashboard, LockKeyhole, Mic, Mic2, MoreHorizontal, Pause, Play,
+  RotateCcw, Settings, ShieldCheck, Sparkles, Star, Target, TrendingUp,
+  UserRound, Volume2, VolumeX, WandSparkles, X, Zap, MessageCircle, Send,
+  Keyboard, Bot
+} from 'lucide-react'
+import './styles.css'
+
+const navItems = [
+  { id: 'dashboard', label: '學習首頁', icon: LayoutDashboard },
+  { id: 'listening', label: '模擬考試', icon: Headphones },
+  { id: 'speaking', label: 'AI 口說教練', icon: Mic2 },
+  { id: 'results', label: '學習分析', icon: BarChart3 },
+]
+
+const practiceCards = [
+  {
+    id: 'listening', eyebrow: 'FULL MOCK TEST', title: '完整模擬考',
+    desc: '30 分鐘企業版測驗', meta: '20 題 · L&R', icon: ShieldCheck, tone: 'navy'
+  },
+  {
+    id: 'listening', eyebrow: 'LISTENING', title: '聽力練習',
+    desc: 'Part 2–4 情境聽力', meta: '約 15 分鐘', icon: Headphones, tone: 'blue'
+  },
+  {
+    id: 'reading', eyebrow: 'READING', title: '閱讀練習',
+    desc: 'Part 5–7 商務閱讀', meta: '約 20 分鐘', icon: BookOpenCheck, tone: 'sand'
+  },
+  {
+    id: 'speaking', eyebrow: 'AI SPEAKING', title: '口說教練',
+    desc: '模擬面試與即時回饋', meta: '3 題 · 約 8 分鐘', icon: Mic, tone: 'coral'
+  }
+]
+
+function App() {
+  const [page, setPage] = useState('dashboard')
+  const [toast, setToast] = useState('')
+
+  const navigate = (id) => {
+    setPage(id === 'reading' ? 'listening' : id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(''), 2600)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  return (
+    <div className="app-shell">
+      <Sidebar page={page} navigate={navigate} />
+      <main className="main-canvas">
+        <Topbar page={page} setToast={setToast} />
+        {page === 'dashboard' && <Dashboard navigate={navigate} setToast={setToast} />}
+        {page === 'listening' && <Listening navigate={navigate} />}
+        {page === 'speaking' && <Speaking navigate={navigate} />}
+        {page === 'results' && <Results navigate={navigate} />}
+      </main>
+      {toast && <div className="toast"><CheckCircle2 size={18} />{toast}</div>}
+    </div>
+  )
+}
+
+function Sidebar({ page, navigate }) {
+  return (
+    <aside className="sidebar">
+      <button className="brand" onClick={() => navigate('dashboard')} aria-label="Lingo 990 首頁">
+        <span className="brand-mark"><span>99</span><i>0</i></span>
+        <span className="brand-name">Lingo <b>990</b></span>
+      </button>
+      <p className="nav-caption">LEARN</p>
+      <nav>
+        {navItems.map(({ id, label, icon: Icon }) => (
+          <button key={id} className={`nav-item ${page === id ? 'active' : ''}`} onClick={() => navigate(id)}>
+            <Icon size={19} strokeWidth={1.9} /><span>{label}</span>
+          </button>
+        ))}
+      </nav>
+      <p className="nav-caption lower">LIBRARY</p>
+      <nav>
+        <button className="nav-item" onClick={() => navigate('results')}><RotateCcw size={19}/><span>錯題複習</span><em>12</em></button>
+        <button className="nav-item" onClick={() => navigate('results')}><BookOpenCheck size={19}/><span>我的單字庫</span></button>
+      </nav>
+      <div className="coach-card">
+        <div className="coach-orbit"><Sparkles size={22}/></div>
+        <b>AI Coach 已就緒</b>
+        <p>今天再練 18 分鐘，就能完成目標。</p>
+        <button onClick={() => navigate('speaking')}>開始練習 <ArrowRight size={14}/></button>
+      </div>
+      <button className="profile-mini">
+        <span className="avatar">JL</span>
+        <span><b>Jamie Lin</b><small>Business plan</small></span>
+        <MoreHorizontal size={18}/>
+      </button>
+    </aside>
+  )
+}
+
+function Topbar({ page, setToast }) {
+  const title = { dashboard: '學習總覽', listening: 'TOEIC Listening Test', speaking: 'AI Speaking Interview', results: '能力分析報告' }[page]
+  return (
+    <header className="topbar">
+      <div>
+        <p>{page === 'dashboard' ? 'TUESDAY, AUGUST 4' : 'LINGO 990 · TOEIC PREP'}</p>
+        <h1>{title}</h1>
+      </div>
+      <div className="top-actions">
+        <button className="device-status" onClick={() => setToast('音訊裝置連線正常')}><span></span><Headphones size={17}/> 音訊正常</button>
+        <button className="icon-btn" aria-label="設定"><Settings size={19}/></button>
+        <button className="avatar top-avatar">JL</button>
+      </div>
+    </header>
+  )
+}
+
+function Dashboard({ navigate, setToast }) {
+  return (
+    <div className="page dashboard-page">
+      <section className="welcome-row">
+        <div>
+          <h2>早安，Jamie <span>👋</span></h2>
+          <p>你的 Part 3 正確率正在上升。今天再完成一組情境題，讓進步延續下去。</p>
+        </div>
+        <button className="outline-btn" onClick={() => setToast('今日學習計畫已展開')}><CalendarDays size={17}/> 查看今日計畫</button>
+      </section>
+
+      <section className="stats-grid">
+        <StatCard icon={Target} label="預估 TOEIC 分數" value="785" suffix="/ 990" trend="+35" kind="score" />
+        <StatCard icon={Flame} label="連續練習" value="12" suffix="天" trend="本週最佳" kind="streak" />
+        <StatCard icon={Clock3} label="今日學習" value="27" suffix="分鐘" trend="目標 45 分" kind="time" />
+        <StatCard icon={CalendarDays} label="下次模擬考" value="08/09" suffix="週日" trend="剩下 5 天" kind="date" />
+      </section>
+
+      <section className="focus-banner">
+        <div className="focus-icon"><WandSparkles size={24}/></div>
+        <div className="focus-copy">
+          <span>AI COACH · 今日焦點</span>
+          <h3>加強 Part 3「地點判斷」</h3>
+          <p>近三次正確率 <b>55%</b>。今天安排 10 題，並複習 airport、reservation、departure。</p>
+        </div>
+        <div className="focus-progress"><b>6<small>/10</small></b><span>已完成</span></div>
+        <button onClick={() => navigate('listening')}>繼續練習 <ArrowRight size={16}/></button>
+      </section>
+
+      <div className="section-heading">
+        <div><span>CHOOSE A SESSION</span><h2>今天想練什麼？</h2></div>
+        <button onClick={() => navigate('results')}>查看全部 <ChevronRight size={16}/></button>
+      </div>
+
+      <section className="practice-grid">
+        {practiceCards.map((card, idx) => <PracticeCard key={idx} {...card} onClick={() => navigate(card.id)} />)}
+      </section>
+
+      <section className="dashboard-lower">
+        <div className="progress-panel panel">
+          <div className="panel-heading"><div><span>WEEKLY PROGRESS</span><h3>本週學習表現</h3></div><button>近 7 天 <ChevronRight size={14}/></button></div>
+          <div className="mini-chart" aria-label="本週學習分鐘柱狀圖">
+            {[42,65,38,81,55,92,27].map((h, i) => <div key={i} className={i === 5 ? 'peak' : ''}><i style={{height: `${h}%`}}></i><span>{['一','二','三','四','五','六','日'][i]}</span></div>)}
+          </div>
+          <div className="chart-note"><TrendingUp size={16}/><b>比上週多 24%</b><span>· 保持這個節奏！</span></div>
+        </div>
+        <div className="upcoming-panel panel">
+          <div className="panel-heading"><div><span>NEXT UP</span><h3>即將進行</h3></div><button><MoreHorizontal size={18}/></button></div>
+          <div className="exam-date"><div><b>09</b><span>AUG</span></div><p><b>企業 TOEIC 模擬測驗</b><span>Listening + Reading · 30 分鐘</span></p></div>
+          <div className="check-row"><Check size={16}/><span>耳機與麥克風測試</span><b>已完成</b></div>
+          <button className="dark-btn" onClick={() => navigate('listening')}>進入考場 <ArrowRight size={16}/></button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function StatCard({ icon: Icon, label, value, suffix, trend, kind }) {
+  return <article className={`stat-card ${kind}`}>
+    <div className="stat-top"><span className="stat-icon"><Icon size={19}/></span><em>{trend}</em></div>
+    <p>{label}</p><h3>{value} <small>{suffix}</small></h3>
+    {kind === 'score' && <div className="score-track"><i></i></div>}
+  </article>
+}
+
+function PracticeCard({ eyebrow, title, desc, meta, icon: Icon, tone, onClick }) {
+  return <button className={`practice-card ${tone}`} onClick={onClick}>
+    <span className="practice-icon"><Icon size={25}/></span>
+    <span className="practice-arrow"><ArrowRight size={17}/></span>
+    <small>{eyebrow}</small><h3>{title}</h3><p>{desc}</p><em>{meta}</em>
+  </button>
+}
+
+const questions = [
+  { number: 41, text: 'Where most likely are the speakers?', options: ['At a hotel', 'At a restaurant', 'At an airport', 'At an office'], correct: 2 },
+  { number: 42, text: 'What problem does the woman mention?', options: ['A delayed departure', 'A missing reservation', 'A damaged suitcase', 'An incorrect receipt'], correct: 0 },
+  { number: 43, text: 'What will the man probably do next?', options: ['Call a customer', 'Check the schedule', 'Print a document', 'Speak to a manager'], correct: 1 },
+]
+
+const listeningConversation = [
+  { speaker: 'A', name: 'Emma', role: 'Traveler', text: 'Excuse me. I thought Flight 718 to Singapore was supposed to board at Gate 21, but the display now says Gate 24.' },
+  { speaker: 'B', name: 'James', role: 'Airport staff', text: "That's correct. The gate has changed, and the departure has been delayed by thirty minutes." },
+  { speaker: 'A', name: 'Emma', role: 'Traveler', text: 'I see. I have a connecting flight after I arrive. Could you check whether I will still have enough time?' },
+  { speaker: 'B', name: 'James', role: 'Airport staff', text: 'Of course. Let me check the updated schedule for you.' },
+]
+
+function Listening({ navigate }) {
+  const [qIndex, setQIndex] = useState(0)
+  const [answers, setAnswers] = useState({})
+  const [playing, setPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [activeSpeaker, setActiveSpeaker] = useState('')
+  const [seconds, setSeconds] = useState(18 * 60 + 45)
+  const fallbackAudioRef = useRef(null)
+  const question = questions[qIndex]
+
+  useEffect(() => {
+    const timer = setInterval(() => setSeconds(s => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => () => {
+    window.clearInterval(fallbackAudioRef.current)
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  }, [])
+
+  const playAudio = () => {
+    if (playing || progress >= 100) return
+    setProgress(2); setPlaying(true); setActiveSpeaker('A')
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      const voices = window.speechSynthesis.getVoices().filter(voice => voice.lang?.toLowerCase().startsWith('en'))
+      const voiceA = voices.find(voice => /zira|aria|samantha|jenny|female/i.test(voice.name)) || voices[0]
+      const voiceB = voices.find(voice => /david|guy|mark|male/i.test(voice.name) && voice !== voiceA) || voices.find(voice => voice !== voiceA) || voices[0]
+      let completedLines = 0
+      listeningConversation.forEach((line) => {
+        const utterance = new SpeechSynthesisUtterance(line.text)
+        utterance.lang = 'en-US'; utterance.rate = line.speaker === 'A' ? .93 : .9
+        utterance.pitch = line.speaker === 'A' ? 1.08 : .88
+        const selectedVoice = line.speaker === 'A' ? voiceA : voiceB
+        if (selectedVoice) utterance.voice = selectedVoice
+        utterance.onstart = () => setActiveSpeaker(line.speaker)
+        let lineFinished = false
+        const finishLine = () => {
+          if (lineFinished) return
+          lineFinished = true; completedLines += 1
+          setProgress((completedLines / listeningConversation.length) * 100)
+          if (completedLines === listeningConversation.length) {
+            setPlaying(false); setActiveSpeaker('')
+          }
+        }
+        utterance.onend = finishLine; utterance.onerror = finishLine
+        window.speechSynthesis.speak(utterance)
+      })
+    } else {
+      let fallbackStep = 0
+      fallbackAudioRef.current = window.setInterval(() => {
+        fallbackStep += 1
+        setActiveSpeaker(listeningConversation[fallbackStep % listeningConversation.length].speaker)
+        setProgress(Math.min(100, fallbackStep * 5))
+        if (fallbackStep >= 20) {
+          window.clearInterval(fallbackAudioRef.current)
+          setPlaying(false); setActiveSpeaker(''); setProgress(100)
+        }
+      }, 500)
+    }
+  }
+
+  const next = () => {
+    if (qIndex < questions.length - 1) setQIndex(qIndex + 1)
+    else navigate('speaking')
+  }
+
+  const mm = String(Math.floor(seconds / 60)).padStart(2, '0')
+  const ss = String(seconds % 60).padStart(2, '0')
+
+  return <div className="exam-page">
+    <div className="exam-meta-bar">
+      <button onClick={() => navigate('dashboard')}><ArrowLeft size={17}/> 離開考試</button>
+      <div className="part-tag"><Headphones size={16}/> PART 3 · 簡短對話</div>
+      <div className="exam-timer"><Clock3 size={17}/><span>剩餘時間</span><b>{mm}:{ss}</b></div>
+    </div>
+    <div className="test-progress"><i style={{width: `${(question.number/100)*100}%`}}></i></div>
+    <section className="exam-stage">
+      <div className="audio-side">
+        <div className="audio-heading"><span>LISTENING</span><em><LockKeyhole size={14}/> 正式模擬模式</em></div>
+        <div className="ai-voice-label"><Sparkles size={14}/> AI DUAL-VOICE SCENARIO</div>
+        <div className={`sound-orb ${playing ? 'playing' : ''}`}>
+          <span className="orbit one"></span><span className="orbit two"></span>
+          <button onClick={playAudio} disabled={playing || progress >= 100} aria-label="播放題目音檔">
+            {playing ? <Volume2 size={32}/> : progress >= 100 ? <Check size={32}/> : <Play size={32} fill="currentColor"/>}
+          </button>
+        </div>
+        <div className="audio-label"><b>{playing ? `AI Speaker ${activeSpeaker === 'A' ? 'Emma' : 'James'} is speaking…` : progress >= 100 ? 'AI conversation completed' : 'AI conversation ready'}</b><span>{playing ? '雙人聲線輪流播放 · 播放期間無法暫停' : progress >= 100 ? '正式模式僅能播放一次' : '點擊播放 AI 情境對話'}</span></div>
+        <div className="speaker-status" aria-label="AI 對話說話者狀態">
+          {listeningConversation.slice(0, 2).map(speaker => <div key={speaker.speaker} className={activeSpeaker === speaker.speaker ? 'active' : ''}>
+            <span>{speaker.speaker}</span><p><b>{speaker.name}</b><small>{speaker.role}</small></p>
+            <em>{[1,2,3,4].map(bar => <i key={bar}></i>)}</em>
+          </div>)}
+        </div>
+        <div className="audio-progress"><i style={{width: `${progress}%`}}></i></div>
+        <div className="wave-bars">
+          {Array.from({length: 42}).map((_,i) => <i key={i} style={{height: `${9 + ((i*13)%25)}px`, opacity: progress / 100 > i/42 ? 1 : .25}}></i>)}
+        </div>
+        <div className="exam-tip"><ShieldCheck size={17}/><p><b>Exam reminder</b><span>請選出最適當的答案。音檔不會顯示在試題本上。</span></p></div>
+      </div>
+      <div className="question-side">
+        <div className="question-kicker"><span>QUESTION {question.number}</span><em>{question.number} / 100</em></div>
+        <h2>{question.text}</h2>
+        <p className="question-zh">請選擇最適當的答案。</p>
+        <div className="answer-list">
+          {question.options.map((opt, i) => <button key={opt} className={answers[question.number] === i ? 'selected' : ''} onClick={() => setAnswers({...answers, [question.number]: i})}>
+            <span>{String.fromCharCode(65+i)}</span><b>{opt}</b><i>{answers[question.number] === i && <Check size={17}/>}</i>
+          </button>)}
+        </div>
+        <div className="question-actions">
+          <button className="flag-btn"><CircleHelp size={17}/> 稍後提醒</button>
+          <button className="next-btn" onClick={next} disabled={answers[question.number] === undefined}>{qIndex === questions.length - 1 ? '進入口說測驗' : '下一題'} <ArrowRight size={18}/></button>
+        </div>
+      </div>
+    </section>
+    <footer className="exam-footer">
+      <div><b>PART 3</b><span>Questions 41–43 refer to the following conversation.</span></div>
+      <div className="question-dots">{questions.map((q,i) => <button key={q.number} className={`${i === qIndex ? 'current' : ''} ${answers[q.number] !== undefined ? 'answered' : ''}`} onClick={() => setQIndex(i)}>{q.number}</button>)}</div>
+      <div className="legend"><span><i className="done"></i>已作答</span><span><i></i>未作答</span></div>
+    </footer>
+  </div>
+}
+
+function Speaking({ navigate }) {
+  const [mode, setMode] = useState('interview')
+  const [phase, setPhase] = useState('ready')
+  const [time, setTime] = useState(15)
+  const [micOk, setMicOk] = useState(false)
+  const streamRef = useRef(null)
+
+  useEffect(() => {
+    if (!['prep','recording'].includes(phase)) return
+    const timer = setInterval(() => setTime(t => {
+      if (t <= 1) {
+        if (phase === 'prep') { setPhase('recording'); setTime(45); startMic() }
+        else { finishRecording() }
+        return 0
+      }
+      return t - 1
+    }), 1000)
+    return () => clearInterval(timer)
+  }, [phase])
+
+  const speakPrompt = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      const u = new SpeechSynthesisUtterance('Tell me about a project you completed recently. What was your role, and what did you learn?')
+      u.lang='en-US'; u.rate=.9; window.speechSynthesis.speak(u)
+    }
+  }
+  const start = () => { speakPrompt(); setPhase('prep'); setTime(15) }
+  const startMic = async () => {
+    try { streamRef.current = await navigator.mediaDevices.getUserMedia({audio:true}); setMicOk(true) }
+    catch { setMicOk(false) }
+  }
+  const finishRecording = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    setPhase('analyzing'); setTimeout(() => navigate('results'), 1600)
+  }
+  const switchMode = (nextMode) => {
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    setPhase('ready'); setTime(15); setMode(nextMode)
+  }
+  const phaseLabel = phase === 'ready' ? '準備開始' : phase === 'prep' ? '準備時間' : phase === 'recording' ? '回答時間' : 'AI 正在分析'
+
+  return <div className="speaking-page">
+    <div className="speaking-topline">
+      <button onClick={() => navigate('dashboard')}><X size={19}/></button>
+      <div className="speaking-mode-switch" role="tablist" aria-label="口說模式">
+        <button className={mode === 'interview' ? 'active' : ''} onClick={() => switchMode('interview')}><ShieldCheck size={14}/> 模擬面試</button>
+        <button className={mode === 'conversation' ? 'active' : ''} onClick={() => switchMode('conversation')}><MessageCircle size={14}/> AI 自由對話</button>
+      </div>
+      <button className="help-pill"><CircleHelp size={16}/> 操作說明</button>
+    </div>
+    {mode === 'interview' ? <section className="interview-stage">
+      <div className="interviewer-panel">
+        <div className="live-pill"><i></i> AI INTERVIEWER</div>
+        <div className="avatar-scene">
+          <div className="avatar-halo h1"></div><div className="avatar-halo h2"></div>
+          <div className="ai-avatar"><div className="hair"></div><div className="face"><i></i><i></i><span></span></div><div className="neck"></div><div className="body"></div></div>
+        </div>
+        <div className="interviewer-name"><b>Maya</b><span>AI English Interviewer</span></div>
+        <div className="speech-caption"><Volume2 size={17}/><p>“Please answer after you hear the beep.”</p></div>
+      </div>
+      <div className="prompt-panel">
+        <div className="prompt-step"><span>QUESTION 1 OF 3</span><div>{[1,2,3].map(i=><i key={i} className={i===1?'active':''}></i>)}</div></div>
+        <span className="prompt-category">WORKPLACE EXPERIENCE</span>
+        <h1>Tell me about a project you completed recently.</h1>
+        <p>What was your role, and what did you learn from the experience?</p>
+        <button className="replay-prompt" onClick={speakPrompt}><Volume2 size={18}/> 重聽題目</button>
+        <div className={`response-console ${phase}`}>
+          <div className="response-head"><span>{phaseLabel}</span><b>{phase === 'ready' ? '00:15' : `00:${String(time).padStart(2,'0')}`}</b></div>
+          <div className="response-main">
+            <div className={`mic-circle ${phase === 'recording' ? 'active' : ''}`}><Mic size={26}/></div>
+            {phase === 'ready' && <div className="ready-copy"><b>準備好後開始作答</b><span>系統將先播放題目，接著提供 15 秒準備時間。</span></div>}
+            {phase === 'prep' && <div className="ready-copy"><b>整理你的回答</b><span>提示：role · action · result · learning</span></div>}
+            {phase === 'recording' && <div className="recording-wave">{Array.from({length:25}).map((_,i)=><i key={i} style={{animationDelay:`${i*.05}s`}}></i>)}</div>}
+            {phase === 'analyzing' && <div className="ready-copy"><b>正在分析你的回答…</b><span>語音、文法、流暢度與回答完整度</span></div>}
+          </div>
+          {phase === 'recording' && <div className="record-status"><span><i></i>{micOk ? 'Recording' : 'Demo recording'}</span><em>時間到將自動停止</em></div>}
+        </div>
+        {phase === 'ready' && <button className="start-answer" onClick={start}><Mic size={19}/> 開始口說測驗</button>}
+        {phase === 'recording' && <button className="stop-answer" onClick={finishRecording}><span></span> 結束回答</button>}
+        {phase === 'prep' && <p className="auto-note"><Clock3 size={15}/> 倒數結束後將自動開啟麥克風</p>}
+      </div>
+    </section> : <AiConversation />}
+  </div>
+}
+
+const conversationStarters = [
+  { label: '工作經驗', prompt: 'Tell me about a challenge you faced at work recently.' },
+  { label: '旅行計畫', prompt: 'Where would you like to travel next, and why?' },
+  { label: '日常對話', prompt: 'How has your day been so far?' },
+]
+
+function createCoachReply(answer, turn) {
+  const text = answer.toLowerCase()
+  if (/project|team|work|colleague|manager/.test(text)) {
+    return "That sounds like a valuable experience. What was the biggest challenge your team faced, and how did you help solve it?"
+  }
+  if (/challenge|problem|difficult|hard/.test(text)) {
+    return "I see. Can you walk me through the specific steps you took to handle that situation?"
+  }
+  if (/travel|trip|country|japan|korea|europe/.test(text)) {
+    return "That sounds exciting! What would you most like to do there, and who would you travel with?"
+  }
+  if (/today|morning|afternoon|day/.test(text)) {
+    return "Thanks for sharing. What is one thing you would like to accomplish before the end of today?"
+  }
+  if (/learn|learned|improve|next time/.test(text)) {
+    return "That is a thoughtful takeaway. How would you apply what you learned if the same situation happened again?"
+  }
+  const followUps = [
+    "Interesting! Could you give me a specific example to help me understand your point better?",
+    "Why was that important to you, and how did it make you feel?",
+    "Good explanation. What happened next, and what was the final result?",
+  ]
+  return followUps[turn % followUps.length]
+}
+
+function AiConversation() {
+  const [messages, setMessages] = useState([
+    { role: 'ai', text: "Hi Jamie! I'm Maya. Let's have a relaxed English conversation. How has your day been so far?" }
+  ])
+  const [input, setInput] = useState('')
+  const [listening, setListening] = useState(false)
+  const [thinking, setThinking] = useState(false)
+  const [notice, setNotice] = useState('')
+  const recognitionRef = useRef(null)
+  const chatScrollRef = useRef(null)
+
+  useEffect(() => {
+    if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+  }, [messages, thinking])
+
+  useEffect(() => () => {
+    recognitionRef.current?.abort?.()
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  }, [])
+
+  const speak = (text) => {
+    if (!('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'en-US'; utterance.rate = .92; utterance.pitch = 1.02
+    window.speechSynthesis.speak(utterance)
+  }
+
+  const sendMessage = (rawText) => {
+    const cleanText = rawText.trim()
+    if (!cleanText || thinking) return
+    setMessages(current => [...current, { role: 'user', text: cleanText }])
+    setInput(''); setNotice(''); setThinking(true)
+    const turn = messages.filter(message => message.role === 'user').length
+    window.setTimeout(() => {
+      const reply = createCoachReply(cleanText, turn)
+      setMessages(current => [...current, { role: 'ai', text: reply }])
+      setThinking(false); speak(reply)
+    }, 850)
+  }
+
+  const startListening = () => {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!Recognition) {
+      setNotice('此瀏覽器不支援語音辨識，請改用下方文字輸入。')
+      return
+    }
+    const recognition = new Recognition()
+    recognitionRef.current = recognition
+    recognition.lang = 'en-US'; recognition.interimResults = true; recognition.continuous = false
+    recognition.onstart = () => { setListening(true); setNotice('Listening… Speak in English') }
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results).map(result => result[0].transcript).join(' ')
+      setInput(transcript)
+      const finalResult = Array.from(event.results).every(result => result.isFinal)
+      if (finalResult) sendMessage(transcript)
+    }
+    recognition.onerror = (event) => {
+      setListening(false)
+      setNotice(event.error === 'not-allowed' ? '請允許麥克風權限後再試一次。' : '沒有聽清楚，請再說一次或改用文字輸入。')
+    }
+    recognition.onend = () => setListening(false)
+    recognition.start()
+  }
+
+  const chooseStarter = (starter) => {
+    setMessages([{ role: 'ai', text: starter.prompt }])
+    setNotice(''); setInput(''); speak(starter.prompt)
+  }
+
+  return <section className="conversation-stage">
+    <aside className="conversation-coach">
+      <div className="live-pill"><i></i> LIVE CONVERSATION</div>
+      <div className="coach-portrait">
+        <div className="ai-avatar"><div className="hair"></div><div className="face"><i></i><i></i><span></span></div><div className="neck"></div><div className="body"></div></div>
+      </div>
+      <div className="interviewer-name"><b>Maya</b><span>AI English Conversation Coach</span></div>
+      <div className="conversation-level"><span><Activity size={15}/> 目前難度</span><b>Business · B2</b></div>
+      <div className="topic-picker">
+        <span>選擇對話主題</span>
+        {conversationStarters.map(starter => <button key={starter.label} onClick={() => chooseStarter(starter)}>{starter.label}<ChevronRight size={14}/></button>)}
+      </div>
+      <p className="privacy-note"><ShieldCheck size={14}/> 錄音只用於本次口說分析</p>
+    </aside>
+    <div className="conversation-main">
+      <div className="conversation-header">
+        <div><span><i></i> AI ONLINE</span><h2>與 Maya 練習英文對話</h2></div>
+        <div className="turn-count"><MessageCircle size={16}/><b>{messages.filter(m => m.role === 'user').length}</b><span>輪對話</span></div>
+      </div>
+      <div className="chat-transcript" aria-live="polite" ref={chatScrollRef}>
+        <div className="conversation-hint"><Sparkles size={15}/> Maya 會根據你的回答自然追問；可直接說英文或使用鍵盤輸入。</div>
+        {messages.map((message, index) => <div key={`${message.role}-${index}`} className={`chat-row ${message.role}`}>
+          <span className="chat-avatar">{message.role === 'ai' ? <Bot size={17}/> : 'JL'}</span>
+          <div className="chat-bubble">
+            <small>{message.role === 'ai' ? 'MAYA · AI COACH' : 'YOU'}</small>
+            <p>{message.text}</p>
+            {message.role === 'ai' && <button onClick={() => speak(message.text)} aria-label="播放 AI 回覆"><Volume2 size={14}/></button>}
+          </div>
+        </div>)}
+        {thinking && <div className="chat-row ai"><span className="chat-avatar"><Bot size={17}/></span><div className="chat-bubble thinking"><i></i><i></i><i></i></div></div>}
+      </div>
+      <div className="conversation-input-area">
+        {notice && <p className={`voice-notice ${listening ? 'active' : ''}`}><span></span>{notice}</p>}
+        <form onSubmit={(event) => { event.preventDefault(); sendMessage(input) }}>
+          <span className="keyboard-icon"><Keyboard size={17}/></span>
+          <input value={input} onChange={event => setInput(event.target.value)} placeholder="Type your answer in English…" aria-label="輸入英文回答" disabled={thinking}/>
+          <button type="button" className={`voice-button ${listening ? 'listening' : ''}`} onClick={startListening} aria-label="使用麥克風回答"><Mic size={19}/></button>
+          <button type="submit" className="send-button" disabled={!input.trim() || thinking} aria-label="送出回答"><Send size={18}/></button>
+        </form>
+        <div className="input-footer"><span>按麥克風開始說話，辨識完成後會自動送出</span><button onClick={() => { setMessages([{role:'ai', text:"Hi again! What would you like to talk about today?"}]); setNotice('') }}><RotateCcw size={13}/> 重新開始</button></div>
+      </div>
+    </div>
+  </section>
+}
+
+const scoreItems = [
+  {name:'發音', en:'Pronunciation', score:78, note:'部分字尾發音可再清楚'},
+  {name:'流暢度', en:'Fluency', score:72, note:'減少句中不必要的停頓'},
+  {name:'文法', en:'Grammar', score:85, note:'時態掌握得相當穩定'},
+  {name:'字彙', en:'Vocabulary', score:74, note:'可加入更精確的動詞'},
+]
+
+function Results({ navigate }) {
+  const [tab, setTab] = useState('feedback')
+  const [playing, setPlaying] = useState(false)
+  const playExample = () => {
+    setPlaying(true)
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance('Last year, I managed an AI development project with a five-person team. I was responsible for coordinating schedules, resolving issues, and communicating with stakeholders.')
+      u.lang='en-US'; u.rate=.85; u.onend=()=>setPlaying(false); window.speechSynthesis.speak(u)
+    } else setTimeout(()=>setPlaying(false),2500)
+  }
+  return <div className="page results-page">
+    <section className="result-hero">
+      <div>
+        <span className="complete-badge"><CheckCircle2 size={15}/> SESSION COMPLETE</span>
+        <h2>回答得不錯，Jamie！</h2>
+        <p>你的內容完整而且時態使用正確。再加強流暢度與字彙變化，就會更接近高分回答。</p>
+        <div className="result-actions"><button onClick={() => navigate('speaking')}><RotateCcw size={17}/> 再答一次</button><button onClick={() => navigate('dashboard')}>回到學習首頁</button></div>
+      </div>
+      <div className="overall-score"><div className="score-ring"><span><b>79</b><small>/ 100</small></span></div><p><b>整體表現</b><span>GOOD · CEFR B2</span></p><em><TrendingUp size={14}/> +4 from last time</em></div>
+    </section>
+
+    <section className="score-breakdown">
+      {scoreItems.map(item => <article key={item.name}>
+        <div><p><b>{item.name}</b><span>{item.en}</span></p><strong>{item.score}</strong></div>
+        <div className="metric-bar"><i style={{width:`${item.score}%`}}></i></div>
+        <small>{item.note}</small>
+      </article>)}
+    </section>
+
+    <div className="analysis-grid">
+      <section className="answer-analysis panel">
+        <div className="analysis-tabs"><button className={tab==='feedback'?'active':''} onClick={()=>setTab('feedback')}>AI 回饋</button><button className={tab==='details'?'active':''} onClick={()=>setTab('details')}>逐句分析</button><button className={tab==='pronunciation'?'active':''} onClick={()=>setTab('pronunciation')}>發音練習</button></div>
+        {tab === 'feedback' && <div className="feedback-body">
+          <AnswerBlock label="YOUR ANSWER" title="你的原始回答" type="original">
+            I <mark>manage</mark> a project last year, and my team <mark>have</mark> five people. I needed to check the schedule and talk with everyone. Finally we finished it on time.
+          </AnswerBlock>
+          <AnswerBlock label="AI CORRECTION" title="文法修正版" type="correction">
+            I <ins>managed</ins> a project last year, and my team <ins>consisted of</ins> five people. I needed to check the schedule and talk with everyone. Finally, we finished it on time.
+          </AnswerBlock>
+          <div className="coach-comment"><Sparkles size={20}/><p><b>Coach Maya</b><span>時態要和「last year」一致，因此使用 <strong>managed</strong>。描述團隊組成時，<strong>consisted of</strong> 會比 have 更自然。</span></p></div>
+        </div>}
+        {tab === 'details' && <div className="detail-list">
+          <div><span>01</span><p><b>I managed a project last year.</b><em><CheckCircle2 size={15}/> 時態修正</em></p><strong>92</strong></div>
+          <div><span>02</span><p><b>My team consisted of five people.</b><em><WandSparkles size={15}/> 自然度提升</em></p><strong>87</strong></div>
+          <div><span>03</span><p><b>Finally, we finished it on time.</b><em><CheckCircle2 size={15}/> 表達正確</em></p><strong>94</strong></div>
+        </div>}
+        {tab === 'pronunciation' && <div className="pronounce-body"><div className="word-card"><b>managed</b><span>/ˈmæn.ɪdʒd/</span><p>注意字尾 <strong>/dʒd/</strong> 的濁音，不要省略最後的 d。</p><button onClick={playExample}><Volume2 size={17}/> 播放示範</button></div><div className="syllables"><span>man</span><i>·</i><span>aged</span><em>STRESS</em></div></div>}
+      </section>
+      <aside className="model-answer panel">
+        <div className="model-heading"><span><Star size={16} fill="currentColor"/> HIGH-SCORE EXAMPLE</span><h3>更自然的高分回答</h3></div>
+        <p>“Last year, I managed an AI development project with a five-person team. I was responsible for coordinating schedules, resolving issues, and communicating with stakeholders.”</p>
+        <button className={playing?'playing':''} onClick={playExample}>{playing?<Pause size={18}/>:<Play size={18} fill="currentColor"/>}<span><b>{playing?'播放中…':'播放標準語音'}</b><small>美式英語 · 正常速度</small></span></button>
+        <div className="upgrade-list"><b>高分關鍵</b><span><Check size={15}/> 使用具體的職責描述</span><span><Check size={15}/> 加入商務情境字彙</span><span><Check size={15}/> 結構清楚，資訊完整</span></div>
+        <button className="save-weak"><BookOpenCheck size={17}/> 儲存到弱點題庫</button>
+      </aside>
+    </div>
+    <section className="next-plan"><div className="plan-spark"><Zap size={20}/></div><div><span>YOUR NEXT STEP</span><h3>AI 已安排下一次練習</h3><p>明天下午 7:30 · 情境應答：專案管理與團隊合作</p></div><button onClick={() => navigate('dashboard')}>查看學習計畫 <ArrowRight size={16}/></button></section>
+  </div>
+}
+
+function AnswerBlock({label,title,type,children}) {
+  return <div className={`answer-block ${type}`}><div><span>{label}</span><b>{title}</b></div><p>{children}</p></div>
+}
+
+createRoot(document.getElementById('root')).render(<App />)
