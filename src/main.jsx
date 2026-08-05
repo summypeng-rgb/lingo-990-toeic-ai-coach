@@ -10,7 +10,7 @@ import {
   Download, Trash2, FileJson, AlertCircle
 } from 'lucide-react'
 import './styles.css'
-import { generatedQuestionBank } from './generatedQuestionBank.js'
+import { generatedQuestionBank, youtubeCompanionQuestionIds } from './generatedQuestionBank.js'
 
 const navItems = [
   { id: 'dashboard', label: '學習首頁', icon: LayoutDashboard },
@@ -680,12 +680,15 @@ function QuestionBank({ navigate }) {
     } catch { return [] }
   })
   const [importOpen, setImportOpen] = useState(false)
+  const [videoCompanion, setVideoCompanion] = useState(false)
   const [rightsConfirmed, setRightsConfirmed] = useState(false)
   const [importNotice, setImportNotice] = useState(null)
   const fileInputRef = useRef(null)
   const allQuestions = [...toeicQuestionBank, ...generatedQuestionBank, ...importedQuestions]
   const availableFilters = bankFilters.filter(item => item === '全部' || allQuestions.some(questionItem => questionItem.part === item))
-  const filtered = filter === '全部' ? allQuestions : allQuestions.filter(item => item.part === filter)
+  const filtered = videoCompanion
+    ? allQuestions.filter(item => youtubeCompanionQuestionIds.includes(item.id))
+    : filter === '全部' ? allQuestions : allQuestions.filter(item => item.part === filter)
   const question = filtered[current]
   const indexPageSize = 40
   const indexPage = Math.floor(current / indexPageSize)
@@ -700,7 +703,11 @@ function QuestionBank({ navigate }) {
 
   const changeFilter = (nextFilter) => {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
-    setFilter(nextFilter); setCurrent(0); setSelected(null); setRevealed(false); setTranscriptOpen(false); setPlaying(false)
+    setVideoCompanion(false); setFilter(nextFilter); setCurrent(0); setSelected(null); setRevealed(false); setTranscriptOpen(false); setPlaying(false)
+  }
+  const startVideoCompanion = () => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    setVideoCompanion(true); setFilter('全部'); setCurrent(0); setSelected(null); setRevealed(false); setTranscriptOpen(false); setPlaying(false)
   }
   const playAudio = () => {
     if (!('speechSynthesis' in window)) return
@@ -752,7 +759,7 @@ function QuestionBank({ navigate }) {
       })
       if (!unique.length) throw new Error('所有題目都已存在，沒有新增內容。')
       setImportedQuestions(currentItems => [...currentItems, ...unique])
-      setFilter('全部'); setCurrent(0); setSelected(null); setRevealed(false)
+      setVideoCompanion(false); setFilter('全部'); setCurrent(0); setSelected(null); setRevealed(false)
       setImportNotice({type:'success', message:`成功匯入 ${unique.length} 題；略過 ${normalized.length - unique.length} 題重複內容。`})
     } catch (error) {
       setImportNotice({type:'error', message:error instanceof Error ? error.message : '檔案格式無法辨識。'})
@@ -767,7 +774,7 @@ function QuestionBank({ navigate }) {
 
   const clearImported = () => {
     if (!importedQuestions.length || !window.confirm(`確定移除這個瀏覽器中已匯入的 ${importedQuestions.length} 題嗎？`)) return
-    setImportedQuestions([]); setFilter('全部'); setCurrent(0); setSelected(null); setRevealed(false)
+    setImportedQuestions([]); setVideoCompanion(false); setFilter('全部'); setCurrent(0); setSelected(null); setRevealed(false)
     setImportNotice({type:'success', message:'已移除所有自行匯入的題目；內建 AI 原創題不受影響。'})
   }
 
@@ -776,8 +783,12 @@ function QuestionBank({ navigate }) {
       <div><span className="original-badge"><Sparkles size={14}/> 364 AI ORIGINAL + LICENSED IMPORT</span><h2>2026 商務情境仿真題庫</h2><p>依 Part 1–7 題型與歷年常見職場情境生成大量原創題；聽力由 AI 朗讀，閱讀提供段落、解析與弱點標籤。</p></div>
       <div className="bank-stats"><span><b>{allQuestions.length}</b><small>題庫總數</small></span><span><b>{toeicQuestionBank.length + generatedQuestionBank.length}</b><small>AI 原創</small></span><span><b>{importedQuestions.length}</b><small>自行匯入</small></span></div>
     </section>
+    <section className="youtube-practice-card">
+      <div className="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/0D-vG9oiOvg" title="TOEIC Listening Practice Test 01 (2026)" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen></iframe></div>
+      <div className="youtube-practice-copy"><span><Play size={13}/> YOUTUBE LISTENING PRACTICE</span><h3>TOEIC Listening Practice Test 01 (2026)</h3><p>影片來源：English With Weup。可直接在播放器完成原影片練習，再進行 Lingo 990 的 30 題原創 Listening 伴讀測驗。</p><div><button onClick={startVideoCompanion}><Headphones size={16}/> 開始 30 題原創伴讀 <ArrowRight size={15}/></button><a href="https://youtu.be/0D-vG9oiOvg" target="_blank" rel="noreferrer">在 YouTube 開啟</a></div><small><LockKeyhole size={13}/> 本站僅嵌入原影片，不重製影片中的考題、音訊或逐字稿。</small></div>
+    </section>
     <div className="bank-toolbar">
-      <div className="bank-filter"><Filter size={15}/>{availableFilters.map(item=><button key={item} className={filter===item?'active':''} onClick={()=>changeFilter(item)}>{item}<em>{item==='全部'?allQuestions.length:allQuestions.filter(q=>q.part===item).length}</em></button>)}</div>
+      <div className="bank-filter"><Filter size={15}/><button className={videoCompanion?'active companion':''} onClick={startVideoCompanion}>影片伴讀<em>{youtubeCompanionQuestionIds.length}</em></button>{availableFilters.map(item=><button key={item} className={!videoCompanion&&filter===item?'active':''} onClick={()=>changeFilter(item)}>{item}<em>{item==='全部'?allQuestions.length:allQuestions.filter(q=>q.part===item).length}</em></button>)}</div>
       <div className="bank-toolbar-actions"><button className="bank-import-btn" onClick={()=>setImportOpen(open=>!open)}><Upload size={16}/> 批次匯入</button><button className="bank-exam-btn" onClick={()=>navigate('listening')}><ShieldCheck size={16}/> 計時模擬考</button></div>
     </div>
     {importOpen&&<section className="bank-import-panel">
@@ -794,14 +805,14 @@ function QuestionBank({ navigate }) {
     </section>}
     <section className="bank-workspace">
       <aside className="bank-index">
-        <div className="bank-index-head"><Layers3 size={16}/><span><b>{filter}</b><small>{filtered.length} questions</small></span></div>
+        <div className="bank-index-head"><Layers3 size={16}/><span><b>{videoCompanion?'影片原創伴讀':filter}</b><small>{filtered.length} questions</small></span></div>
         <div className="bank-question-grid">{indexQuestions.map((item,index)=>{const actualIndex=indexStart+index;return <button key={item.id} className={`${actualIndex===current?'current':''} ${answers[item.id]===true?'passed':answers[item.id]===false?'failed':''}`} onClick={()=>jumpQuestion(actualIndex)}>{actualIndex+1}</button>})}</div>
         <div className="bank-index-pagination"><button disabled={indexPage===0} onClick={()=>jumpQuestion(indexStart-indexPageSize)}><ArrowLeft size={12}/></button><span>{indexStart+1}–{Math.min(indexStart+indexPageSize,filtered.length)} / {filtered.length}</span><button disabled={indexStart+indexPageSize>=filtered.length} onClick={()=>jumpQuestion(indexStart+indexPageSize)}><ArrowRight size={12}/></button></div>
         <div className="bank-legend"><span><i className="passed"></i>答對</span><span><i className="failed"></i>待複習</span></div>
         <div className="bank-source-note"><LockKeyhole size={15}/><p><b>內容來源</b><span>內建題為 AI 原創；自行匯入內容由使用者確認授權。</span></p></div>
       </aside>
       <article className="bank-question-card">
-        <header><div><span>{question.part}</span><b>{question.category}</b>{(question.group||question.source)&&<em>{question.group||(question.source==='imported'?'IMPORTED':'AI GENERATED')}</em>}</div><small>{question.difficulty} · QUESTION {current+1} / {filtered.length}</small></header>
+        <header><div><span>{question.part}</span><b>{question.category}</b>{(videoCompanion||question.group||question.source)&&<em>{videoCompanion?'VIDEO COMPANION':question.group||(question.source==='imported'?'IMPORTED':'AI GENERATED')}</em>}</div><small>{question.difficulty} · QUESTION {current+1} / {filtered.length}</small></header>
         {question.scene&&<div className="bank-scene"><Eye size={18}/><div><span>PHOTO SCENE · 原創情境提示</span><b>{question.scene}</b><small>正式 Part 1 會呈現照片；此題以文字場景協助練習動作與位置描述。</small></div></div>}
         {question.passage&&<div className="bank-reading-passage"><span>{question.part==='Part 6'?'TEXT COMPLETION':'READING MATERIAL'}</span><pre>{question.passage}</pre></div>}
         {(question.spoken||question.script)&&<div className="bank-audio">

@@ -170,3 +170,9 @@ const part7 = readingPassages.flatMap((item, passageIndex) => item.questions.map
 }, question[1], question[2], passageIndex + questionIndex)))
 
 export const generatedQuestionBank = [...part1, ...part2, ...part3, ...part4, ...part5, ...part6, ...part7]
+
+export const youtubeCompanionQuestionIds = [
+  ...part2.slice(0, 12),
+  ...part3.slice(0, 9),
+  ...part4.slice(0, 9)
+].map(question => question.id)
