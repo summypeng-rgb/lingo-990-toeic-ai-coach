@@ -6,7 +6,8 @@ import {
   LayoutDashboard, LockKeyhole, Mic, Mic2, MoreHorizontal, Pause, Play,
   RotateCcw, Settings, ShieldCheck, Sparkles, Star, Target, TrendingUp,
   UserRound, Volume2, VolumeX, WandSparkles, X, Zap, MessageCircle, Send,
-  Keyboard, Bot, Database, Filter, Lightbulb, Eye, Layers3
+  Keyboard, Bot, Database, Filter, Lightbulb, Eye, Layers3, Upload,
+  Download, Trash2, FileJson, AlertCircle
 } from 'lucide-react'
 import './styles.css'
 
@@ -609,7 +610,53 @@ const toeicQuestionBank = [
   { id:'p5-08', part:'Part 5', category:'字彙 · 形容詞', difficulty:'中階', prompt:'The café has become increasingly _____ among employees in nearby offices.', options:['popularity','popular','popularly','popularize'], correct:1, explanation:'become 是連綴動詞，後面需要形容詞 popular 作主詞補語；increasingly 修飾該形容詞。', tags:['word form','popular','linking verb'] }
 ]
 
-const bankFilters = ['全部', 'Part 2', 'Part 3', 'Part 5']
+const bankFilters = ['全部', 'Part 1', 'Part 2', 'Part 3', 'Part 4', 'Part 5', 'Part 6', 'Part 7']
+const importedBankKey = 'lingo990-imported-question-bank-v1'
+
+function parseCsv(text) {
+  const rows = []
+  let row = [], cell = '', quoted = false
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    if (char === '"' && quoted && text[index + 1] === '"') { cell += '"'; index += 1 }
+    else if (char === '"') quoted = !quoted
+    else if (char === ',' && !quoted) { row.push(cell); cell = '' }
+    else if ((char === '\n' || char === '\r') && !quoted) {
+      if (char === '\r' && text[index + 1] === '\n') index += 1
+      row.push(cell); cell = ''
+      if (row.some(value => value.trim())) rows.push(row)
+      row = []
+    } else cell += char
+  }
+  row.push(cell)
+  if (row.some(value => value.trim())) rows.push(row)
+  if (rows.length < 2) return []
+  const headers = rows[0].map(header => header.trim())
+  return rows.slice(1).map(values => Object.fromEntries(headers.map((header,index) => [header, values[index]?.trim() || ''])))
+}
+
+function normalizeImportedQuestion(raw, index) {
+  const partValue = String(raw.part || '').trim()
+  const part = /^part\s*[1-7]$/i.test(partValue) ? `Part ${partValue.match(/[1-7]/)[0]}` : /^[1-7]$/.test(partValue) ? `Part ${partValue}` : ''
+  const options = Array.isArray(raw.options)
+    ? raw.options.map(String).map(value => value.trim()).filter(Boolean)
+    : [raw.optionA, raw.optionB, raw.optionC, raw.optionD].map(value => String(value || '').trim()).filter(Boolean)
+  const correctRaw = String(raw.correct ?? '').trim()
+  const correct = /^[A-D]$/i.test(correctRaw) ? correctRaw.toUpperCase().charCodeAt(0) - 65 : Number(correctRaw)
+  const prompt = String(raw.prompt || '').trim()
+  if (!part) throw new Error(`第 ${index + 1} 題：part 必須是 Part 1–Part 7。`)
+  if (!prompt) throw new Error(`第 ${index + 1} 題：缺少 prompt 題幹。`)
+  if (options.length < 2 || options.length > 4) throw new Error(`第 ${index + 1} 題：需要 2–4 個選項。`)
+  if (!Number.isInteger(correct) || correct < 0 || correct >= options.length) throw new Error(`第 ${index + 1} 題：correct 請填 A–D 或從 0 開始的選項序號。`)
+  const script = Array.isArray(raw.script) ? raw.script.map(line => ({speaker:String(line.speaker || 'N'),text:String(line.text || '').trim()})).filter(line => line.text) : undefined
+  const tags = Array.isArray(raw.tags) ? raw.tags.map(String) : String(raw.tags || '').split('|').map(tag => tag.trim()).filter(Boolean)
+  return {
+    id:`import-${String(raw.id || `${Date.now()}-${index}`).replace(/[^a-z0-9_-]/gi,'-')}`,
+    part, category:String(raw.category || '自訂題庫'), difficulty:String(raw.difficulty || '自訂'),
+    prompt, spoken:String(raw.spoken || '').trim() || undefined, script:script?.length ? script : undefined,
+    options, correct, explanation:String(raw.explanation || '此題尚未提供解析。'), tags, source:'imported'
+  }
+}
 
 function QuestionBank({ navigate }) {
   const [filter, setFilter] = useState('全部')
@@ -619,12 +666,28 @@ function QuestionBank({ navigate }) {
   const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [answers, setAnswers] = useState({})
-  const filtered = filter === '全部' ? toeicQuestionBank : toeicQuestionBank.filter(item => item.part === filter)
+  const [importedQuestions, setImportedQuestions] = useState(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(importedBankKey) || '[]')
+      return Array.isArray(saved) ? saved : []
+    } catch { return [] }
+  })
+  const [importOpen, setImportOpen] = useState(false)
+  const [rightsConfirmed, setRightsConfirmed] = useState(false)
+  const [importNotice, setImportNotice] = useState(null)
+  const fileInputRef = useRef(null)
+  const allQuestions = [...toeicQuestionBank, ...importedQuestions]
+  const availableFilters = bankFilters.filter(item => item === '全部' || allQuestions.some(questionItem => questionItem.part === item))
+  const filtered = filter === '全部' ? allQuestions : allQuestions.filter(item => item.part === filter)
   const question = filtered[current]
   const completed = Object.keys(answers).length
   const correctCount = Object.values(answers).filter(Boolean).length
 
   useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [])
+  useEffect(() => {
+    try { window.localStorage.setItem(importedBankKey, JSON.stringify(importedQuestions)) }
+    catch { setImportNotice({type:'error', message:'瀏覽器儲存空間不足，請縮小檔案或改用後端題庫。'}) }
+  }, [importedQuestions])
 
   const changeFilter = (nextFilter) => {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
@@ -658,24 +721,72 @@ function QuestionBank({ navigate }) {
     return ''
   }
 
+  const importFile = async event => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const parsed = file.name.toLowerCase().endsWith('.json') ? JSON.parse(text) : parseCsv(text)
+      const records = Array.isArray(parsed) ? parsed : parsed.questions
+      if (!Array.isArray(records) || !records.length) throw new Error('檔案中找不到可匯入的題目。')
+      const normalized = records.map(normalizeImportedQuestion)
+      const fingerprints = new Set(allQuestions.map(item => `${item.part}|${item.prompt}|${item.spoken || ''}`.toLowerCase().replace(/\s+/g,' ')))
+      const unique = normalized.filter(item => {
+        const fingerprint = `${item.part}|${item.prompt}|${item.spoken || ''}`.toLowerCase().replace(/\s+/g,' ')
+        if (fingerprints.has(fingerprint)) return false
+        fingerprints.add(fingerprint); return true
+      })
+      if (!unique.length) throw new Error('所有題目都已存在，沒有新增內容。')
+      setImportedQuestions(currentItems => [...currentItems, ...unique])
+      setFilter('全部'); setCurrent(0); setSelected(null); setRevealed(false)
+      setImportNotice({type:'success', message:`成功匯入 ${unique.length} 題；略過 ${normalized.length - unique.length} 題重複內容。`})
+    } catch (error) {
+      setImportNotice({type:'error', message:error instanceof Error ? error.message : '檔案格式無法辨識。'})
+    } finally { event.target.value = '' }
+  }
+
+  const downloadTemplate = () => {
+    const template = 'id,part,category,difficulty,prompt,spoken,optionA,optionB,optionC,optionD,correct,explanation,tags\ncustom-001,Part 5,文法 · 動詞,中階,The manager _____ the proposal yesterday.,,reviewed,reviews,reviewing,review,A,過去時間 yesterday 搭配過去式 reviewed。,verb form|past tense'
+    const url = URL.createObjectURL(new Blob(['\uFEFF', template], {type:'text/csv;charset=utf-8'}))
+    const link = document.createElement('a'); link.href = url; link.download = 'lingo990-question-import-template.csv'; link.click(); URL.revokeObjectURL(url)
+  }
+
+  const clearImported = () => {
+    if (!importedQuestions.length || !window.confirm(`確定移除這個瀏覽器中已匯入的 ${importedQuestions.length} 題嗎？`)) return
+    setImportedQuestions([]); setFilter('全部'); setCurrent(0); setSelected(null); setRevealed(false)
+    setImportNotice({type:'success', message:'已移除所有自行匯入的題目；內建 AI 原創題不受影響。'})
+  }
+
   return <div className="page bank-page">
     <section className="bank-hero">
-      <div><span className="original-badge"><Sparkles size={14}/> AI ORIGINAL · 非官方真題</span><h2>2026 商務情境仿真題庫</h2><p>依 TOEIC Listening &amp; Reading 題型結構原創設計；聽力由 AI 朗讀，作答後提供逐字稿與中文解析。</p></div>
-      <div className="bank-stats"><span><b>{toeicQuestionBank.length}</b><small>原創題目</small></span><span><b>{completed}</b><small>本次完成</small></span><span><b>{completed?Math.round(correctCount/completed*100):0}%</b><small>正確率</small></span></div>
+      <div><span className="original-badge"><Sparkles size={14}/> AI ORIGINAL + LICENSED IMPORT</span><h2>2026 商務情境仿真題庫</h2><p>內建 AI 原創題，也可批次匯入你合法持有的 Part 1–7 題庫；聽力由 AI 朗讀，作答後提供逐字稿與解析。</p></div>
+      <div className="bank-stats"><span><b>{allQuestions.length}</b><small>題庫總數</small></span><span><b>{importedQuestions.length}</b><small>自行匯入</small></span><span><b>{completed?Math.round(correctCount/completed*100):0}%</b><small>正確率</small></span></div>
     </section>
     <div className="bank-toolbar">
-      <div className="bank-filter"><Filter size={15}/>{bankFilters.map(item=><button key={item} className={filter===item?'active':''} onClick={()=>changeFilter(item)}>{item}<em>{item==='全部'?toeicQuestionBank.length:toeicQuestionBank.filter(q=>q.part===item).length}</em></button>)}</div>
-      <button className="bank-exam-btn" onClick={()=>navigate('listening')}><ShieldCheck size={16}/> 進入計時模擬考</button>
+      <div className="bank-filter"><Filter size={15}/>{availableFilters.map(item=><button key={item} className={filter===item?'active':''} onClick={()=>changeFilter(item)}>{item}<em>{item==='全部'?allQuestions.length:allQuestions.filter(q=>q.part===item).length}</em></button>)}</div>
+      <div className="bank-toolbar-actions"><button className="bank-import-btn" onClick={()=>setImportOpen(open=>!open)}><Upload size={16}/> 批次匯入</button><button className="bank-exam-btn" onClick={()=>navigate('listening')}><ShieldCheck size={16}/> 計時模擬考</button></div>
     </div>
+    {importOpen&&<section className="bank-import-panel">
+      <div className="import-panel-head"><div><span><FileJson size={18}/></span><p><b>匯入自有／授權題庫</b><small>支援 UTF-8 JSON、CSV · Part 1–7 · 自動驗證與排除重複題</small></p></div><button onClick={()=>setImportOpen(false)} aria-label="關閉匯入區"><X size={17}/></button></div>
+      <div className="import-guide">
+        <div><b>必要欄位</b><code>part, prompt, options / optionA–D, correct</code><span>correct 可填 A–D，或從 0 開始的選項序號。</span></div>
+        <div><b>聽力欄位</b><code>spoken</code><span>JSON 亦可使用 script: [{'{'} speaker, text {'}'}] 建立多人對話。</span></div>
+        <div><b>選填欄位</b><code>category, difficulty, explanation, tags</code><span>CSV 的 tags 請以 | 分隔。</span></div>
+      </div>
+      <label className="rights-confirm"><input type="checkbox" checked={rightsConfirmed} onChange={event=>setRightsConfirmed(event.target.checked)}/><span><b>我確認匯入內容為自有、已獲授權或公開領域資料</b><small>請勿上傳外流正式試題或未取得授權的影片逐字稿。</small></span></label>
+      <div className="import-actions"><button onClick={downloadTemplate}><Download size={15}/> 下載 CSV 範本</button><button className="import-primary" disabled={!rightsConfirmed} onClick={()=>fileInputRef.current?.click()}><Upload size={15}/> 選擇 JSON／CSV</button><button className="import-clear" disabled={!importedQuestions.length} onClick={clearImported}><Trash2 size={15}/> 清除已匯入 ({importedQuestions.length})</button></div>
+      <input ref={fileInputRef} className="import-file-input" type="file" accept=".json,.csv,application/json,text/csv" onChange={importFile}/>
+      {importNotice&&<p className={`import-notice ${importNotice.type}`}><AlertCircle size={15}/>{importNotice.message}</p>}
+    </section>}
     <section className="bank-workspace">
       <aside className="bank-index">
         <div className="bank-index-head"><Layers3 size={16}/><span><b>{filter}</b><small>{filtered.length} questions</small></span></div>
         <div className="bank-question-grid">{filtered.map((item,index)=><button key={item.id} className={`${index===current?'current':''} ${answers[item.id]===true?'passed':answers[item.id]===false?'failed':''}`} onClick={()=>{setCurrent(index);setSelected(null);setRevealed(false);setTranscriptOpen(false)}}>{index+1}</button>)}</div>
         <div className="bank-legend"><span><i className="passed"></i>答對</span><span><i className="failed"></i>待複習</span></div>
-        <div className="bank-source-note"><LockKeyhole size={15}/><p><b>內容聲明</b><span>題目皆為 AI 原創仿真內容，不重製 YouTube 影片或正式試題。</span></p></div>
+        <div className="bank-source-note"><LockKeyhole size={15}/><p><b>內容來源</b><span>內建題為 AI 原創；自行匯入內容由使用者確認授權。</span></p></div>
       </aside>
       <article className="bank-question-card">
-        <header><div><span>{question.part}</span><b>{question.category}</b>{question.group&&<em>{question.group}</em>}</div><small>{question.difficulty} · QUESTION {current+1} / {filtered.length}</small></header>
+        <header><div><span>{question.part}</span><b>{question.category}</b>{(question.group||question.source==='imported')&&<em>{question.group||'IMPORTED'}</em>}</div><small>{question.difficulty} · QUESTION {current+1} / {filtered.length}</small></header>
         {(question.spoken||question.script)&&<div className="bank-audio">
           <button className={playing?'playing':''} onClick={playAudio}><span>{playing?<Volume2 size={23}/>:<Play size={22}/>}</span><p><b>{playing?'AI 正在朗讀…':'播放 AI 聽力內容'}</b><small>{question.script?'雙角色英語對話 · 建議先不看逐字稿':'美式英語 · TOEIC Question–Response'}</small></p></button>
           <div className={`mini-wave ${playing?'active':''}`}>{Array.from({length:22}).map((_,index)=><i key={index} style={{height:`${7+(index*7%19)}px`}}></i>)}</div>
