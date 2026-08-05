@@ -10,6 +10,7 @@ import {
   Download, Trash2, FileJson, AlertCircle
 } from 'lucide-react'
 import './styles.css'
+import { generatedQuestionBank } from './generatedQuestionBank.js'
 
 const navItems = [
   { id: 'dashboard', label: '學習首頁', icon: LayoutDashboard },
@@ -654,8 +655,14 @@ function normalizeImportedQuestion(raw, index) {
     id:`import-${String(raw.id || `${Date.now()}-${index}`).replace(/[^a-z0-9_-]/gi,'-')}`,
     part, category:String(raw.category || '自訂題庫'), difficulty:String(raw.difficulty || '自訂'),
     prompt, spoken:String(raw.spoken || '').trim() || undefined, script:script?.length ? script : undefined,
+    passage:String(raw.passage || '').trim() || undefined, scene:String(raw.scene || '').trim() || undefined,
     options, correct, explanation:String(raw.explanation || '此題尚未提供解析。'), tags, source:'imported'
   }
+}
+
+function questionFingerprint(item) {
+  const scriptText = Array.isArray(item.script) ? item.script.map(line => line.text || '').join(' ') : ''
+  return `${item.part}|${item.prompt}|${item.spoken || ''}|${scriptText}|${item.passage || ''}|${item.scene || ''}`.toLowerCase().replace(/\s+/g,' ')
 }
 
 function QuestionBank({ navigate }) {
@@ -676,12 +683,14 @@ function QuestionBank({ navigate }) {
   const [rightsConfirmed, setRightsConfirmed] = useState(false)
   const [importNotice, setImportNotice] = useState(null)
   const fileInputRef = useRef(null)
-  const allQuestions = [...toeicQuestionBank, ...importedQuestions]
+  const allQuestions = [...toeicQuestionBank, ...generatedQuestionBank, ...importedQuestions]
   const availableFilters = bankFilters.filter(item => item === '全部' || allQuestions.some(questionItem => questionItem.part === item))
   const filtered = filter === '全部' ? allQuestions : allQuestions.filter(item => item.part === filter)
   const question = filtered[current]
-  const completed = Object.keys(answers).length
-  const correctCount = Object.values(answers).filter(Boolean).length
+  const indexPageSize = 40
+  const indexPage = Math.floor(current / indexPageSize)
+  const indexStart = indexPage * indexPageSize
+  const indexQuestions = filtered.slice(indexStart, indexStart + indexPageSize)
 
   useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [])
   useEffect(() => {
@@ -713,6 +722,11 @@ function QuestionBank({ navigate }) {
     setCurrent(index => (index+offset+filtered.length)%filtered.length)
     setSelected(null); setRevealed(false); setTranscriptOpen(false); setPlaying(false)
   }
+  const jumpQuestion = questionIndex => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    setCurrent(Math.max(0, Math.min(questionIndex, filtered.length - 1)))
+    setSelected(null); setRevealed(false); setTranscriptOpen(false); setPlaying(false)
+  }
   const transcriptVisible = transcriptOpen || revealed
   const statusClass = optionIndex => {
     if (!revealed) return selected===optionIndex?'selected':''
@@ -730,9 +744,9 @@ function QuestionBank({ navigate }) {
       const records = Array.isArray(parsed) ? parsed : parsed.questions
       if (!Array.isArray(records) || !records.length) throw new Error('檔案中找不到可匯入的題目。')
       const normalized = records.map(normalizeImportedQuestion)
-      const fingerprints = new Set(allQuestions.map(item => `${item.part}|${item.prompt}|${item.spoken || ''}`.toLowerCase().replace(/\s+/g,' ')))
+      const fingerprints = new Set(allQuestions.map(questionFingerprint))
       const unique = normalized.filter(item => {
-        const fingerprint = `${item.part}|${item.prompt}|${item.spoken || ''}`.toLowerCase().replace(/\s+/g,' ')
+        const fingerprint = questionFingerprint(item)
         if (fingerprints.has(fingerprint)) return false
         fingerprints.add(fingerprint); return true
       })
@@ -746,7 +760,7 @@ function QuestionBank({ navigate }) {
   }
 
   const downloadTemplate = () => {
-    const template = 'id,part,category,difficulty,prompt,spoken,optionA,optionB,optionC,optionD,correct,explanation,tags\ncustom-001,Part 5,文法 · 動詞,中階,The manager _____ the proposal yesterday.,,reviewed,reviews,reviewing,review,A,過去時間 yesterday 搭配過去式 reviewed。,verb form|past tense'
+    const template = 'id,part,category,difficulty,prompt,spoken,passage,scene,optionA,optionB,optionC,optionD,correct,explanation,tags\ncustom-001,Part 5,文法 · 動詞,中階,The manager _____ the proposal yesterday.,,,,reviewed,reviews,reviewing,review,A,過去時間 yesterday 搭配過去式 reviewed。,verb form|past tense'
     const url = URL.createObjectURL(new Blob(['\uFEFF', template], {type:'text/csv;charset=utf-8'}))
     const link = document.createElement('a'); link.href = url; link.download = 'lingo990-question-import-template.csv'; link.click(); URL.revokeObjectURL(url)
   }
@@ -759,8 +773,8 @@ function QuestionBank({ navigate }) {
 
   return <div className="page bank-page">
     <section className="bank-hero">
-      <div><span className="original-badge"><Sparkles size={14}/> AI ORIGINAL + LICENSED IMPORT</span><h2>2026 商務情境仿真題庫</h2><p>內建 AI 原創題，也可批次匯入你合法持有的 Part 1–7 題庫；聽力由 AI 朗讀，作答後提供逐字稿與解析。</p></div>
-      <div className="bank-stats"><span><b>{allQuestions.length}</b><small>題庫總數</small></span><span><b>{importedQuestions.length}</b><small>自行匯入</small></span><span><b>{completed?Math.round(correctCount/completed*100):0}%</b><small>正確率</small></span></div>
+      <div><span className="original-badge"><Sparkles size={14}/> 364 AI ORIGINAL + LICENSED IMPORT</span><h2>2026 商務情境仿真題庫</h2><p>依 Part 1–7 題型與歷年常見職場情境生成大量原創題；聽力由 AI 朗讀，閱讀提供段落、解析與弱點標籤。</p></div>
+      <div className="bank-stats"><span><b>{allQuestions.length}</b><small>題庫總數</small></span><span><b>{toeicQuestionBank.length + generatedQuestionBank.length}</b><small>AI 原創</small></span><span><b>{importedQuestions.length}</b><small>自行匯入</small></span></div>
     </section>
     <div className="bank-toolbar">
       <div className="bank-filter"><Filter size={15}/>{availableFilters.map(item=><button key={item} className={filter===item?'active':''} onClick={()=>changeFilter(item)}>{item}<em>{item==='全部'?allQuestions.length:allQuestions.filter(q=>q.part===item).length}</em></button>)}</div>
@@ -771,7 +785,7 @@ function QuestionBank({ navigate }) {
       <div className="import-guide">
         <div><b>必要欄位</b><code>part, prompt, options / optionA–D, correct</code><span>correct 可填 A–D，或從 0 開始的選項序號。</span></div>
         <div><b>聽力欄位</b><code>spoken</code><span>JSON 亦可使用 script: [{'{'} speaker, text {'}'}] 建立多人對話。</span></div>
-        <div><b>選填欄位</b><code>category, difficulty, explanation, tags</code><span>CSV 的 tags 請以 | 分隔。</span></div>
+        <div><b>閱讀／選填欄位</b><code>passage, scene, category, explanation, tags</code><span>Part 6–7 可填 passage；CSV 的 tags 請以 | 分隔。</span></div>
       </div>
       <label className="rights-confirm"><input type="checkbox" checked={rightsConfirmed} onChange={event=>setRightsConfirmed(event.target.checked)}/><span><b>我確認匯入內容為自有、已獲授權或公開領域資料</b><small>請勿上傳外流正式試題或未取得授權的影片逐字稿。</small></span></label>
       <div className="import-actions"><button onClick={downloadTemplate}><Download size={15}/> 下載 CSV 範本</button><button className="import-primary" disabled={!rightsConfirmed} onClick={()=>fileInputRef.current?.click()}><Upload size={15}/> 選擇 JSON／CSV</button><button className="import-clear" disabled={!importedQuestions.length} onClick={clearImported}><Trash2 size={15}/> 清除已匯入 ({importedQuestions.length})</button></div>
@@ -781,14 +795,17 @@ function QuestionBank({ navigate }) {
     <section className="bank-workspace">
       <aside className="bank-index">
         <div className="bank-index-head"><Layers3 size={16}/><span><b>{filter}</b><small>{filtered.length} questions</small></span></div>
-        <div className="bank-question-grid">{filtered.map((item,index)=><button key={item.id} className={`${index===current?'current':''} ${answers[item.id]===true?'passed':answers[item.id]===false?'failed':''}`} onClick={()=>{setCurrent(index);setSelected(null);setRevealed(false);setTranscriptOpen(false)}}>{index+1}</button>)}</div>
+        <div className="bank-question-grid">{indexQuestions.map((item,index)=>{const actualIndex=indexStart+index;return <button key={item.id} className={`${actualIndex===current?'current':''} ${answers[item.id]===true?'passed':answers[item.id]===false?'failed':''}`} onClick={()=>jumpQuestion(actualIndex)}>{actualIndex+1}</button>})}</div>
+        <div className="bank-index-pagination"><button disabled={indexPage===0} onClick={()=>jumpQuestion(indexStart-indexPageSize)}><ArrowLeft size={12}/></button><span>{indexStart+1}–{Math.min(indexStart+indexPageSize,filtered.length)} / {filtered.length}</span><button disabled={indexStart+indexPageSize>=filtered.length} onClick={()=>jumpQuestion(indexStart+indexPageSize)}><ArrowRight size={12}/></button></div>
         <div className="bank-legend"><span><i className="passed"></i>答對</span><span><i className="failed"></i>待複習</span></div>
         <div className="bank-source-note"><LockKeyhole size={15}/><p><b>內容來源</b><span>內建題為 AI 原創；自行匯入內容由使用者確認授權。</span></p></div>
       </aside>
       <article className="bank-question-card">
-        <header><div><span>{question.part}</span><b>{question.category}</b>{(question.group||question.source==='imported')&&<em>{question.group||'IMPORTED'}</em>}</div><small>{question.difficulty} · QUESTION {current+1} / {filtered.length}</small></header>
+        <header><div><span>{question.part}</span><b>{question.category}</b>{(question.group||question.source)&&<em>{question.group||(question.source==='imported'?'IMPORTED':'AI GENERATED')}</em>}</div><small>{question.difficulty} · QUESTION {current+1} / {filtered.length}</small></header>
+        {question.scene&&<div className="bank-scene"><Eye size={18}/><div><span>PHOTO SCENE · 原創情境提示</span><b>{question.scene}</b><small>正式 Part 1 會呈現照片；此題以文字場景協助練習動作與位置描述。</small></div></div>}
+        {question.passage&&<div className="bank-reading-passage"><span>{question.part==='Part 6'?'TEXT COMPLETION':'READING MATERIAL'}</span><pre>{question.passage}</pre></div>}
         {(question.spoken||question.script)&&<div className="bank-audio">
-          <button className={playing?'playing':''} onClick={playAudio}><span>{playing?<Volume2 size={23}/>:<Play size={22}/>}</span><p><b>{playing?'AI 正在朗讀…':'播放 AI 聽力內容'}</b><small>{question.script?'雙角色英語對話 · 建議先不看逐字稿':'美式英語 · TOEIC Question–Response'}</small></p></button>
+          <button className={playing?'playing':''} onClick={playAudio}><span>{playing?<Volume2 size={23}/>:<Play size={22}/>}</span><p><b>{playing?'AI 正在朗讀…':'播放 AI 聽力內容'}</b><small>{question.script?'雙角色英語對話 · 建議先不看逐字稿':question.part==='Part 1'?'四句圖片敘述 · 僅播放一次練習':'美式英語 · TOEIC Question–Response / Talk'}</small></p></button>
           <div className={`mini-wave ${playing?'active':''}`}>{Array.from({length:22}).map((_,index)=><i key={index} style={{height:`${7+(index*7%19)}px`}}></i>)}</div>
           <button className="transcript-toggle" onClick={()=>setTranscriptOpen(open=>!open)}><Eye size={15}/>{transcriptOpen?'隱藏逐字稿':'查看逐字稿'}</button>
         </div>}
